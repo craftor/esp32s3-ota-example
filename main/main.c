@@ -39,12 +39,12 @@ static EventGroupHandle_t event_group;
 /*! Saves OTA config received from ThingsBoard*/
 static struct shared_keys
 {
-    char targetFwServerUrl[1024];
+    char targetFwServerUrl[256];
     char targetFwVer[128];
 } shared_attributes;
 
 /*! Buffer to save a received MQTT message */
-static char mqtt_msg[2047];
+static char mqtt_msg[511];
 
 static esp_mqtt_client_handle_t mqtt_client;
 
