@@ -11,7 +11,7 @@
 #define TAG "tb_ota"
 
 /*! Firmware version used for comparison after OTA config was received from ThingsBoard */
-#define FIRMWARE_VERSION "v1.1"
+#define FIRMWARE_VERSION "v1.3"
 
 /*! Factory partiton label */
 #define FACTORY_PARTITION_LABEL "factory"
@@ -60,7 +60,7 @@
 
 /*! Max length of access token */
 #define MAX_LENGTH_TB_ACCESS_TOKEN 20
-#define MAX_LENGTH_TB_URL 256
+#define MAX_LENGTH_TB_URL 1024
 
 /*! NVS storage key where the MQTT broker URL is saved */
 #define NVS_KEY_MQTT_URL "mqtt_url"
@@ -84,7 +84,6 @@ enum state
     STATE_WAIT_OTA_CONFIG_FETCHED,
     STATE_OTA_CONFIG_FETCHED,
     STATE_APP_LOOP,
-
     STATE_CONNECTION_IS_OK
 };
 

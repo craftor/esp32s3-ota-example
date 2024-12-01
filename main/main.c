@@ -7,7 +7,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
-#include "esp_event_loop.h"
+#include "esp_event.h"
 #include "esp_log.h"
 
 #include "lwip/err.h"
@@ -19,7 +19,8 @@
 #include "cJSON.h"
 
 #include "main.h"
-#include "wifi.h"
+// #include "wifi.h"
+#include "wifi2.h"
 
 #include "esp_ota_ops.h"
 #include "esp_http_client.h"
@@ -38,12 +39,12 @@ static EventGroupHandle_t event_group;
 /*! Saves OTA config received from ThingsBoard*/
 static struct shared_keys
 {
-    char targetFwServerUrl[256];
+    char targetFwServerUrl[1024];
     char targetFwVer[128];
 } shared_attributes;
 
 /*! Buffer to save a received MQTT message */
-static char mqtt_msg[512];
+static char mqtt_msg[2047];
 
 static esp_mqtt_client_handle_t mqtt_client;
 
@@ -69,11 +70,15 @@ static void parse_ota_config(const cJSON *object)
     }
 }
 
-static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
+static esp_err_t mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
-    assert(event != NULL);
+    // assert(event != NULL);
 
-    switch (event->event_id)
+    esp_mqtt_event_handle_t event = event_data;
+    esp_mqtt_client_handle_t client = event->client;
+    int msg_id;
+
+    switch ((esp_mqtt_event_id_t)event_id)
     {
     case MQTT_EVENT_CONNECTED:
         xEventGroupClearBits(event_group, MQTT_DISCONNECTED_EVENT);
@@ -140,7 +145,10 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
     case MQTT_EVENT_BEFORE_CONNECT:
         ESP_LOGD(TAG, "MQTT_EVENT_BEFORE_CONNECT");
         break;
+    default:
+        break;
     }
+
     return ESP_OK;
 }
 
@@ -175,6 +183,8 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
         break;
     case HTTP_EVENT_DISCONNECTED:
         ESP_LOGD(TAG, "HTTP_EVENT_DISCONNECTED");
+        break;
+    default:
         break;
     }
     return ESP_OK;
@@ -364,13 +374,12 @@ static void mqtt_app_start(const char *running_partition_label)
     const char *mqtt_access_token = get_mqtt_access_token(running_partition_label);
 
     esp_mqtt_client_config_t mqtt_cfg = {
-        .uri = mqtt_url,
-        .event_handle = mqtt_event_handler,
-        .port = mqtt_port,
-        .username = mqtt_access_token
-    };
+        .broker.address.uri = mqtt_url,
+        .broker.address.port = mqtt_port,
+        .credentials.username = mqtt_access_token};
 
     mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
+    esp_mqtt_client_register_event(mqtt_client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
     APP_ABORT_ON_ERROR(esp_mqtt_client_start(mqtt_client));
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -497,7 +506,12 @@ static void ota_task(void *pvParameters)
             strncpy(running_partition_label, running_partition->label, sizeof(running_partition_label));
             ESP_LOGI(TAG, "Running partition: %s", running_partition_label);
 
-            initialise_wifi(running_partition_label);
+            // initialise_wifi(running_partition_label);
+            // initialise_wifi();
+
+            lgp_wifi_init();
+            lgp_wifi_connect(WIFI_SSID, WIFI_PASS);
+
             state = STATE_WAIT_WIFI;
             break;
         }
